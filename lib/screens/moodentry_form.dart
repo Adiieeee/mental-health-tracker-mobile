@@ -1,5 +1,13 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:mental_health_tracker/widgets/left_drawer.dart';
+import 'package:pbp_django_auth/pbp_django_auth.dart';
+import 'package:provider/provider.dart';
+import 'package:mental_health_tracker/screens/menu.dart';
+import 'package:mental_health_tracker/screens/moodentry_form.dart';
+import 'package:mental_health_tracker/screens/list_moodentry.dart';
+
 
 class MoodEntryFormPage extends StatefulWidget {
   const MoodEntryFormPage({super.key});
@@ -16,6 +24,7 @@ class _MoodEntryFormPageState extends State<MoodEntryFormPage> {
 
   @override
   Widget build(BuildContext context) {
+    final request = context.watch<CookieRequest>();
     return Scaffold(
       appBar: AppBar(
         title: const Center(
@@ -26,7 +35,39 @@ class _MoodEntryFormPageState extends State<MoodEntryFormPage> {
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,
         actions: [
-          IconButton(onPressed: (){}, icon: Icon(Icons.arrow_back))
+          IconButton(onPressed: () async {
+            if (_formKey.currentState!.validate()) {
+                // Kirim ke Django dan tunggu respons
+                // TODO: Ganti URL dan jangan lupa tambahkan trailing slash (/) di akhir URL!
+                final response = await request.postJson(
+                    "http://127.0.0.1:8000/create-flutter/",
+                    jsonEncode(<String, String>{
+                        'mood': _mood,
+                        'mood_intensity': _moodIntensity.toString(),
+                        'feelings': _feelings,
+                    // TODO: Sesuaikan field data sesuai dengan aplikasimu
+                    }),
+                );
+                if (context.mounted) {
+                    if (response['status'] == 'success') {
+                        ScaffoldMessenger.of(context)
+                            .showSnackBar(const SnackBar(
+                        content: Text("Mood baru berhasil disimpan!"),
+                        ));
+                        Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(builder: (context) => MyHomePage()),
+                        );
+                    } else {
+                        ScaffoldMessenger.of(context)
+                            .showSnackBar(const SnackBar(
+                            content:
+                                Text("Terdapat kesalahan, silakan coba lagi."),
+                        ));
+                    }
+                }
+            }
+          }, icon: Icon(Icons.arrow_back))
         ],
       ),
       drawer: const LeftDrawer(),
